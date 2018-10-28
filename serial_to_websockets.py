@@ -32,9 +32,10 @@ except:
 print("Serial port '" + ser.name + "' opened (" + str(ser.baudrate) + " Baud).")
 
 async def handler(websocket, path):
+    print("User connected.")
     ser.flushInput()
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(.1)
         data = []
         lines = ser.read_all().splitlines()
         for line in lines:
@@ -44,8 +45,11 @@ async def handler(websocket, path):
                 data.append(x)
             except:
                 None
-        await websocket.send(json.dumps(data, indent=4))
-
+        data_length = len(lines)
+        packet = dict()
+        packet["data_length"] = data_length
+        packet["data"] = data
+        await websocket.send(json.dumps(packet))
 
 start_server = websockets.serve(handler, '127.0.0.1', 5678)
 
