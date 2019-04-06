@@ -1,6 +1,6 @@
 *.swp
 *.pyc
 *.pyo
-
+data/
 # Visual Studio Code
 /.vscode/
