@@ -1,4 +1,4 @@
-# Wemods D1
+# Wemos D1
 [Wemos D1](https://wiki.wemos.cc/products:d1:d1_mini)
 
 Pin  |  Function                      |  ESP-8266 Pin
