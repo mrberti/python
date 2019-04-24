@@ -1,4 +1,4 @@
-# Wemods D1
+# Wemos D1
 [Wemos D1](https://wiki.wemos.cc/products:d1:d1_mini)
 
 Pin  |  Function                      |  ESP-8266 Pin
@@ -19,6 +19,13 @@ G    |  Ground                        |  GND
 5V   |  5V                            |  -
 3V3  |  3.3V                          |  3.3V
 RST  |  Reset                         |  RST
+
+# Flashing firmware
+Got some problems on flashing: No REPL. Using the option `-fm dout` did the
+trick. [Solution](https://forum.micropython.org/viewtopic.php?f=16&t=3629&start=10)
+```
+esptool.exe --port COM9 --baud 460800 write_flash -fm dout --flash_size=detect 0 firmware-combined.bin
+```
 
 # Sample Code
 [Micropython Doc](http://docs.micropython.org/en/latest/esp8266/quickref.html#general-board-control)

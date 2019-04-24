@@ -20,6 +20,7 @@ MISO = D6 = 12
 MOSI = D7 = 13
 SS = D8 = 15
 
+
 # WLAN interface
 STA_IF = network.WLAN(network.STA_IF)
 
@@ -63,11 +64,15 @@ def udp_send(msg, host, port):
 
 def tcp_connect(host, port, timeout=10):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.settimeout(timeout)
+    # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # sock.settimeout(timeout)
     sock_addr = socket.getaddrinfo(host, port)[0][-1]
+    print("TCP connect: {}".format(sock_addr))
     sock.connect(sock_addr)
     return sock
 
-def tcp_send(msg, sock):
+def tcp_send(msg, host, port, timeout=10):
+    sock = tcp_connect(host, port, timeout)
+    print("Send data: {!r}".format(msg))
     sock.send(msg.encode("utf-8"))
+    sock.close()
