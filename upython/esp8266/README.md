@@ -59,6 +59,7 @@ esptool.exe --port COM9 --baud 460800 write_flash -fm dout --flash_size=detect 0
 >>> adc.read()
 ```
 ## SPI
+Hardware SPI uses D5 (SCK), D6 (MISO), D7 (MOSI).
 ```Python
 >>> hspi = SPI(1, baudrate=80000000, polarity=0, phase=0)
 >>> hspi.read(10)            # read 10 bytes on MISO
