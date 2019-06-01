@@ -5,3 +5,5 @@
 data/
 # Visual Studio Code
 .vscode
+# Binaries
+*.bin

@@ -20,6 +20,15 @@ G    |  Ground                        |  GND
 3V3  |  3.3V                          |  3.3V
 RST  |  Reset                         |  RST
 
+![pinout](https://www.prometec.net/wp-content/uploads/2016/03/e90c9fb2-9114-3c70-5adf-5697ba268788.jpg)
+
+# Wemos with Battery
+[Wemos with battery](https://macsbug.wordpress.com/2017/05/10/pocket-8266-d1-mini-wifi-module/)
+
+![Overview](https://macsbug.files.wordpress.com/2017/05/pocket_layout1.png)
+
+![charge_schematic](https://macsbug.files.wordpress.com/2017/05/pocket-8266-d1-mini-schematic.png)
+
 # Flashing firmware
 Got some problems on flashing: No REPL. Using the option `-fm dout` did the
 trick. [Solution](https://forum.micropython.org/viewtopic.php?f=16&t=3629&start=10)
