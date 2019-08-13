@@ -33,6 +33,7 @@ RST  |  Reset                         |  RST
 Got some problems on flashing: No REPL. Using the option `-fm dout` did the
 trick. [Solution](https://forum.micropython.org/viewtopic.php?f=16&t=3629&start=10)
 ```
+esptool.exe --port COM9 --baud 460800 erase_flash
 esptool.exe --port COM9 --baud 460800 write_flash -fm dout --flash_size=detect 0 firmware-combined.bin
 ```
 
