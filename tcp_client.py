@@ -7,26 +7,26 @@ argv = sys.argv
 
 for i in range(len(argv)):
 	arg = argv[i]
-        print( arg )
+	print( arg )
 
 TCP_IP = argv[1]
-TCP_PORT = 5005
+TCP_PORT = 5025
 BUFFER_SIZE = 1024
-MESSAGE1 = "GET /wiki/Katzen HTTP/1.1\n"
-MESSAGE2 = "Host: de.wikipedia.de\n\n"
+MESSAGE1 = b"GET /wiki/Katzen HTTP/1.1\n"
+MESSAGE2 = b"Host: de.wikipedia.de\n\n"
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
 
 sent = s.send(MESSAGE1)
-print sent
+print(sent)
 sent = s.send(MESSAGE2)
-print sent
+print(sent)
 
 data = s.recv(BUFFER_SIZE)
-print "closing..."
+print("closing...")
 asd = s.close()
-print "closed!"
+print("closed!")
 
-print "received data:", data
+print("received data: %s", data)
 
