@@ -25,12 +25,13 @@ SECRET_KEY = '+h*=y8!!zszv&4ur9=+)#9j7@9n=lhlw3qx3+$@h$s5$q@2r%)'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.40", "192.168.1.61"]
+ALLOWED_HOSTS = ["192.168.1.40", "192.168.1.61", "mrberti.de"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    # "ajax.apps.AjaxConfig",
     "polls.apps.PollsConfig",
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,7 +56,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

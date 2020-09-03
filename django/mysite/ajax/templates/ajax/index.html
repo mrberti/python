@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    This is AJAX index
+    <form action="#" method="POST">
+        {% csrf_token %}
+        <input type="text" name="text" id="text">
+        <input type="button" value="sub" id="sub">
+        <button id="submit">Submit</button>
+    </form>
+
+<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+<script>
+    // $("#text").change(() => {
+    //     var val = $("#text").val()
+    //     console.log(val);
+    //     $.ajax({
+    //         url: "data",
+    //         data: {
+    //             username: val,
+    //         },
+    //         dataType: "json",
+    //         success: function(data) {
+    //             console.log(data)
+    //         }
+    //     });
+    // })
+    $("#sub").click(() => {
+        console.log("sub");
+        $.ajax({
+            url: "data",
+            data: {
+                username: "simon",
+            },
+            dataType: "json",
+            success: function(data) {
+                console.log(data)
+            }
+        });
+    });
+</script>
+</body>
+</html>
