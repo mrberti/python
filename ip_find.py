@@ -12,8 +12,10 @@ pid = list()
 
 for i in range(1,254):
 	ip_str = str(ip[0]) + "." + str(ip[1]) + "." + str(ip[2]) + "." + str(i)
-	cmd = "ping -c 1 -W 2 " + ip_str + " | grep -i 'bytes from'"
+	cmd = "ping -c 1 -W 2 " + ip_str + " | grep -i 'Antwort'"
 	pid.append(subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE))
+
+time.sleep(2)
 
 for i in range(1,254):
 	str = pid[i-1].stdout.read()
