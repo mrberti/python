@@ -9,3 +9,4 @@ data/
 # Binaries
 *.bin
 .venv/
+api_keys.json
