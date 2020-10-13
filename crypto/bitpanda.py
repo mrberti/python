@@ -4,7 +4,6 @@ import json
 import gzip
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
-import pandas as pd
 
 FILE_BASE_PATH = os.path.dirname(__file__)
 API_KEY_FILE_PATH = os.path.join(FILE_BASE_PATH, "api_keys.json")
