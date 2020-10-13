@@ -9,4 +9,7 @@ data/
 # Binaries
 *.bin
 .venv/
+# Private data
 api_keys.json
+*.key
+*.crt
