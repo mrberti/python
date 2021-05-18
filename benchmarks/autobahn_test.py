@@ -8,11 +8,11 @@ from autobahn.asyncio.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 
 # IP = "172.19.72.42"
-IP = "192.168.1.80"
+# IP = "192.168.1.80"
 # IP = "217.160.241.208"
 # IP = "192.168.1.17"
 # IP = "localhost"
-# IP = "127.0.0.1"
+IP = "127.0.0.1"
 PORT = 54321
 URI = f"ws://{IP}:{PORT}"
 ADDR = (IP, PORT)
@@ -61,28 +61,21 @@ class ClientProtocol(WebSocketClientProtocol):
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
 
-def server():
+async def server():
     factory = WebSocketServerFactory(URI)
     factory.protocol = ServerProtocol
 
-    loop = asyncio.get_event_loop()
-    coro = loop.create_server(factory, IP, PORT)
-    server = loop.run_until_complete(coro)
-
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.close()
-        loop.close()
+    loop = asyncio.get_running_loop()
+    server = await loop.create_server(factory, IP, PORT)
+    async with server:
+        await server.serve_forever()
 
 async def client():
     factory = WebSocketClientFactory(URI)
     factory.protocol = ClientProtocol
     loop = asyncio.get_running_loop()
     transport, proto = await loop.create_connection(factory, IP, PORT)
-    # await proto.is_open
+    await proto.is_open
     try:
         await proto.is_closed
         print("Connection was closed")
@@ -93,9 +86,11 @@ async def client():
     plot_statistics(t)
 
 if is_server():
-    server()
+    task = server
 else:
-    try:
-        asyncio.run(client())
-    except KeyboardInterrupt:
-        print("CANCALCALS")
+    task = client
+
+try:
+    asyncio.run(task())
+except KeyboardInterrupt:
+    print("CANCALCALS")
