@@ -1,6 +1,3 @@
-connect serial com9
-cp boot.py /pyboard/boot.py
+connect serial com4
 cp main.py /pyboard/main.py
-cp nodemcu32s.py /pyboard/nodemcu32s.py
-cp ..\\utils.py /pyboard
 repl

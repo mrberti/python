@@ -4,7 +4,6 @@ https://www.shenzhen2u.com/NodeMCU-32S
 import network # pylint: disable=import-error
 import machine # pylint: disable=import-error
 
-
 # Pin defines
 LED_PIN_NO = 2
 SDA_PIN_NO = 22

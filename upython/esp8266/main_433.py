@@ -15,7 +15,7 @@ t = [0]
 i = 0
 for bit in data:
     if bit == "0":
-        sleep_ticks_us = 310
+        sleep_ticks_us = 350
     else:
         sleep_ticks_us = 1018
     t.append(t[i - 1] + 310)
