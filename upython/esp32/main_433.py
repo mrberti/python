@@ -7,10 +7,10 @@ import machine
 
 # Custom modules
 import utils
-import nodemcu32s as board
+import board
 
 # Global parameters
-PIN_TX = 23
+PIN_TX = board.TX_PIN_NO
 TCP_IP = ""
 TCP_PORT = 1234
 

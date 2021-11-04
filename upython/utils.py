@@ -49,7 +49,7 @@ def read_credentials():
             essid = f.readline().strip()
             password = f.readline().strip()
     except Exception as exc:
-        exc_str = f"Could not read credentials file. {exc}"
+        exc_str = "Could not read credentials file. {exc}".format(exc=exc)
         raise Exception(exc_str)
     return (essid, password)
 

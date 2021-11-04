@@ -1,5 +1,6 @@
-connect serial com9
-cp main.py /pyboard
-cp wemos.py /pyboard
+connect serial com3
+cp boot.py /pyboard/boot.py
+cp board.py /pyboard/board.py
 cp ..\\utils.py /pyboard
+cp main_433.py /pyboard/main.py
 repl
