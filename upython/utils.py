@@ -44,9 +44,13 @@ class LED(object):
             self.on()
 
 def read_credentials():
-    with open("credentials") as f:
-        essid = f.readline().strip()
-        password = f.readline().strip()
+    try:
+        with open("credentials") as f:
+            essid = f.readline().strip()
+            password = f.readline().strip()
+    except Exception as exc:
+        exc_str = f"Could not read credentials file. {exc}"
+        raise Exception(exc_str)
     return (essid, password)
 
 def do_connect(essid=None, password=None):
