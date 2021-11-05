@@ -306,14 +306,20 @@ class HTTPServer(object):
     def _get_route_cb(self, request):
         # TODO:
         # - dynamic parameters
-        # - regular expressions for paths
+        request_path = request.path
+        request_method = request.method
+        path_match = False
         for route in self.routes:
-            if request.path == route[0]:
+            if isinstance(route[0], str):
+                path_match = request_path == route[0]
+            else:
+                if route[0].match(request_path): path_match = True
+            if path_match:
                 if len(route) < 3:
-                    if request.method == "GET":
+                    if request_method == "GET":
                         return route[1]
                 else:
-                    if request.method in route[2]:
+                    if request_method in route[2]:
                         return route[1]
         return None
 

@@ -1,5 +1,5 @@
 #%%
-from http_serv import *
+import re
 try:
     import utils
     import machine
@@ -13,6 +13,8 @@ try:
     ntptime.settime()
 except ImportError:
     pass
+
+from http_serv import *
 
 def index(request):
     data = "This is my data :)"
@@ -41,12 +43,16 @@ def j(request):
         data["params"] = request.params
     return data
 
+def s(request):
+    return request.path
+
 routes = [
     ("/", index),
     ("/home", home),
     ("/fail", fail),
     ("/req", req, ["GET", "POST"]),
     ("/j", j),
+    (re.compile(r"^/s/(.*)"), s)
 ]
 
 server = HTTPServer(routes)
