@@ -5,10 +5,12 @@ try:
     import utils
     import machine
     import ntptime
+    import board
     machine.freq(160000000)
     utils.STA_IF.config(dhcp_hostname="http_serv")
     utils.do_connect()
     ntptime.settime()
+    led = utils.LED(board.LED_PIN_NO, board.LED_LOGIC_INVERTED)
     del machine
     del ntptime
     del utils
@@ -25,35 +27,6 @@ def index(request):
     }
     return "", 301, headers
 
-def home(request):
-    headers = {
-        "Content-Type": "text"
-    }
-    return "home", headers
-
-def fail(request):
-    headers = {
-        "Content-Type": "text/plain"
-    }
-    return "failed", 404, headers
-
-def req(request):
-    return http.HTTPResponse("asd")
-
-def j(request):
-    data = {
-        "a": 123,
-    }
-    if request.params:
-        data["params"] = request.params
-    return data
-
-def s(request):
-    data = {
-        "matches": request.path_matches
-    }
-    return data
-
 def static(request):
     filepath = "static/" + request.path_matches[1]
     if "../" in filepath:
@@ -63,13 +36,30 @@ def static(request):
     except Exception as exc:
         return str(exc), 404
 
+def api_led(request):
+    if request.method == "GET":
+        state = "on" if led.is_on() else "off"
+        result = {"led": {"state": state}}
+    else:
+        params = request.params
+        if not "state" in params:
+            return "Parameter `state` is not set", 400
+        state = params["state"].lower()
+        if state == "on":
+            led.on()
+        elif state == "off":
+            led.off()
+        elif state == "toggle":
+            led.toggle()
+            state = "on" if led.is_on() else "off"
+        else:
+            return "Parameter `state` is wrong", 400
+        result = {"led": {"state": state}}
+    return result
+
 routes = [
     ("/", index),
-    ("/home", home),
-    ("/fail", fail),
-    ("/req", req, ["GET", "POST"]),
-    ("/j", j),
-    (re.compile(r"^/s/(.*)"), s),
+    ("/api/led", api_led, ["GET", "POST"]),
     (re.compile(r"^/(.+\..+)"), static),
 ]
 
