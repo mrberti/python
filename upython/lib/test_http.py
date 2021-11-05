@@ -26,9 +26,12 @@ def req(request):
     return make_response("asd")
 
 def j(request):
-    return {
+    data = {
         "a": 123,
-    }, 200
+    }
+    if request.params:
+        data["params"] = request.params
+    return data
 
 routes = [
     ("/", index),

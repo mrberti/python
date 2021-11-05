@@ -26,6 +26,7 @@ http_methods = [
 ]
 
 http_protocols = [
+    "HTTP/1.0",
     "HTTP/1.1",
 ]
 
@@ -84,7 +85,10 @@ class HTTPRequest(object):
         if request is None:
             self.method = None
             self.url = None
+            self.path = None
+            self.params = {}
             self.protocol = None
+            self.is_1_0 = None
             self.headers = {}
             self.data = None
             self.term = None
@@ -98,13 +102,25 @@ class HTTPRequest(object):
         self.method = match.group(1)
         self.url = match.group(2)
         self.protocol = match.group(3)
+        self.is_1_0 = "1.0" in self.protocol
         self.headers = parse_headers(lines[1:])
         self.method = self.method.upper()
+        self.parse_url()
+
+    def parse_url(self):
+        self.params = {}
+        splitted_url = self.url.split("?")
+        self.path = splitted_url[0]
+        if len(splitted_url) > 1:
+            splitted_params = splitted_url[1].split("&")
+            for param in splitted_params:
+                k, v = param.split("=")
+                self.params[k] = v
 
 class HTTPResponse(object):
     def __init__(self, data, status_code=200, headers={}, protocol="HTTP/1.1"):
         self.status_code = status_code
-        self.reason = http_status_codes[status_code]
+        self.reason = http_status_codes.get(status_code, "NA")
         self.headers = headers
         self.data = data
         self.protocol = protocol
@@ -167,8 +183,8 @@ class HTTPServer(object):
             recv = self.remote_socket.recv(1024).decode("ascii")
             try:
                 request = HTTPRequest(recv)
-            except:
-                self.bad_request()
+            except Exception as exc:
+                self.bad_request(str(exc))
                 continue
 
             # Get the route and execute the callback
@@ -217,7 +233,7 @@ class HTTPServer(object):
 
     def _get_route_cb(self, request):
         for route in self.routes:
-            if request.url == route[0]:
+            if request.path == route[0]:
                 if len(route) < 3:
                     if request.method == "GET":
                         return route[1]
@@ -242,6 +258,6 @@ def make_response(data, status_code=200, headers={}):
     return HTTPResponse(data=data, status_code=status_code, headers=headers)
 
 def jsonify(data, status_code=200, headers={}):
-    headers["Content-Type"] = "text/json"
+    headers["Content-Type"] = "application/json"
     data = json.dumps(data)
     return HTTPResponse(data, status_code, headers)
