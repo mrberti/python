@@ -154,6 +154,7 @@ class HTTPRequest(object):
             self.method = None
             self.url = None
             self.path = None
+            self.path_matches = []
             self.params = {}
             self.protocol = None
             self.is_1_0 = None
@@ -173,6 +174,7 @@ class HTTPRequest(object):
         self.is_1_0 = "1.0" in self.protocol
         self.headers = parse_headers(lines[1:])
         self.method = self.method.upper()
+        self.path_matches = []
         self.parse_url()
 
     def parse_url(self):
@@ -305,7 +307,7 @@ class HTTPServer(object):
 
     def _get_route_cb(self, request):
         # TODO:
-        # - dynamic parameters
+        # - Intuitive named dynamic parameters
         request_path = request.path
         request_method = request.method
         path_match = False
@@ -313,7 +315,18 @@ class HTTPServer(object):
             if isinstance(route[0], str):
                 path_match = request_path == route[0]
             else:
-                if route[0].match(request_path): path_match = True
+                match = route[0].match(request_path)
+                if match:
+                    path_match = True
+                    request.path_matches = []
+                    matches_left = True
+                    i = 0
+                    while matches_left:
+                        try:
+                            request.path_matches.append(match.group(i))
+                            i += 1
+                        except IndexError:
+                            matches_left = False
             if path_match:
                 if len(route) < 3:
                     if request_method == "GET":

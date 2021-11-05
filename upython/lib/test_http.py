@@ -3,13 +3,11 @@ import re
 try:
     import utils
     import machine
-    machine.freq(160000000)
-    utils.do_connect()
-except:
-    pass
-
-try:
     import ntptime
+    import network
+    machine.freq(160000000)
+    utils.STA_IF.config(dhcp_hostname="http_serv")
+    utils.do_connect()
     ntptime.settime()
 except ImportError:
     pass
@@ -44,7 +42,10 @@ def j(request):
     return data
 
 def s(request):
-    return request.path
+    data = {
+        "matches": request.path_matches
+    }
+    return data
 
 routes = [
     ("/", index),
@@ -57,5 +58,3 @@ routes = [
 
 server = HTTPServer(routes)
 server.run()
-
-# %%
