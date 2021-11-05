@@ -306,6 +306,7 @@ class HTTPServer(object):
         self.routes = routes
         self.server_address = server_address
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.running = False
 
     def __del__(self):
