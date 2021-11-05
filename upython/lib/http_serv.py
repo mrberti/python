@@ -137,14 +137,7 @@ def create_date():
         m = date.minute
         s = date.second
     date_str = "{wd}, {d:02} {mo} {y}, {h:02}:{m:02}:{s:02} GMT".format(
-        wd=wd,
-        d=d,
-        mo=mo,
-        y=y,
-        h=h,
-        m=m,
-        s=s
-    )
+        wd=wd, d=d, mo=mo, y=y, h=h, m=m, s=s)
     return date_str
 
 
@@ -187,13 +180,26 @@ class HTTPRequest(object):
                 k, v = param.split("=")
                 self.params[k] = v
 
+    def __str__(self):
+        return (
+            "{method} {url} {protocol}\r\n"
+            "{headers}"
+            "\r\n"
+            "{data}".format(
+                method=self.method,
+                url=self.url,
+                protocol=self.protocol,
+                headers=create_headers(self.headers),
+                data=self.data if self.data else ""
+            ))
+
 class HTTPResponse(object):
     def __init__(self, data, status_code=200, headers={}, protocol="HTTP/1.1"):
         self.status_code = status_code
         self.reason = http_status_codes.get(status_code, "NA")
         self.headers = headers
         self.data = data
-        self.protocol = protocol
+        self.protocol = protocol.upper()
         self._create_basic_headers()
 
     def __str__(self):
@@ -202,7 +208,7 @@ class HTTPResponse(object):
             "{headers}"
             "\r\n"
             "{data}".format(
-                protocol=self.protocol.upper(),
+                protocol=self.protocol,
                 status_code=self.status_code,
                 reason=self.reason,
                 headers=create_headers(self.headers),
@@ -259,6 +265,9 @@ class HTTPServer(object):
             except Exception as exc:
                 self.bad_request(str(exc))
                 continue
+            print("<" * 20)
+            print(request)
+            print("<" * 20)
 
             # Get the route and execute the callback
             cb = self._get_route_cb(request)
@@ -303,7 +312,7 @@ class HTTPServer(object):
                 else:
                     response = HTTPResponse(data, status_code, headers)
             self.finish(response)
-            print("Required ms: ", (time.time_ns() - start) / 1000000)
+            print("Required time: {} ms".format((time.time_ns() - start) / 1000000))
 
     def _get_route_cb(self, request):
         # TODO:
@@ -345,6 +354,9 @@ class HTTPServer(object):
         self.finish(response)
 
     def finish(self, response):
+        print(">" * 20)
+        print(response)
+        print(">" * 20)
         self.remote_socket.send(response.encoded())
         self.remote_socket.close()
 
