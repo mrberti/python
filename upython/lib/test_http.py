@@ -1,22 +1,29 @@
 #%%
 import re
+import gc
 try:
     import utils
     import machine
     import ntptime
-    import network
     machine.freq(160000000)
     utils.STA_IF.config(dhcp_hostname="http_serv")
     utils.do_connect()
     ntptime.settime()
+    del machine
+    del ntptime
+    del utils
 except ImportError:
     pass
 
-from http_serv import *
+gc.collect()
+
+import http_serv as http
 
 def index(request):
-    data = "This is my data :)"
-    return data
+    headers = {
+        "Location": "/index.html",
+    }
+    return "", 301, headers
 
 def home(request):
     headers = {
@@ -31,7 +38,7 @@ def fail(request):
     return "failed", 404, headers
 
 def req(request):
-    return make_response("asd")
+    return http.HTTPResponse("asd")
 
 def j(request):
     data = {
@@ -47,14 +54,24 @@ def s(request):
     }
     return data
 
+def static(request):
+    filepath = "static/" + request.path_matches[1]
+    if "../" in filepath:
+        return "Relative filepaths are not allowed!", 400
+    try:
+        return http.HTTPFileResponse(filepath)
+    except Exception as exc:
+        return str(exc), 404
+
 routes = [
     ("/", index),
     ("/home", home),
     ("/fail", fail),
     ("/req", req, ["GET", "POST"]),
     ("/j", j),
-    (re.compile(r"^/s/(.*)"), s)
+    (re.compile(r"^/s/(.*)"), s),
+    (re.compile(r"^/(.+\..+)"), static),
 ]
 
-server = HTTPServer(routes)
+server = http.HTTPServer(routes)
 server.run()

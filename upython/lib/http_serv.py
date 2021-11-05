@@ -4,6 +4,7 @@ Extremely simple and basic HTTP handling! Do not expect anything.
 import json
 import re
 import socket
+import os
 import time # delete
 
 # wrap datetime handling
@@ -17,6 +18,7 @@ except ImportError:
 
 HEADER_DEFAULT_SERVER = "http_serv/0.0.1a"
 HEADER_DEFAULT_CONTENT_TYPE = "text/plain"
+HEADER_DEFAULT_BINARY_TYPE = "application/octet-stream"
 BASE_ENCODING = "utf-8"
 
 try:
@@ -26,51 +28,47 @@ except AttributeError:
 
 http_methods = [
     "GET",
-    "HEAD",
+    # "HEAD",
     "POST",
     "PUT",
     "DELETE",
-    "CONNECT",
-    "OPTIONS",
-    "TRACE",
-    "PATCH",
+    # "CONNECT",
+    # "OPTIONS",
+    # "TRACE",
+    # "PATCH",
 ]
 
 http_protocols = [
-    "HTTP/1.0",
     "HTTP/1.1",
 ]
 
 http_status_codes = {
     200: "OK",
+    301: "Moved Permanently",
     400: "Bad Request",
     404: "Not Found",
+    500: "Internal Server Error",
     505: "HTTP Version not supported",
 }
 
-week_days = {
-    0: "Sun",
-    1: "Mon",
-    2: "Wed",
-    3: "Thu",
-    4: "Fri",
-    5: "Sat",
-    6: "Sun",
-}
-
-month = {
-    1: "Jan",
-    2: "Feb",
-    3: "Mar",
-    4: "Apr",
-    5: "May",
-    6: "Jun",
-    7: "Jul",
-    8: "Aug",
-    9: "Sep",
-    10: "Oct",
-    11: "Nov",
-    12: "Dec",
+mime_types = {
+    # Just the basic stuff
+    ".css": "text/css",
+    ".csv": "text/csv",
+    ".gif": "image/gif",
+    ".htm": "text/html,",
+    ".html": "text/html,",
+    ".ico": "image/vnd.microsoft.icon",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".js": "text/javascript",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".pdf": "application/pdf",
+    ".svg": "image/svg+xml",
+    ".txt": "text/plain",
+    ".xhtml": "application/xhtml+xml",
+    ".zip": "application/zip",
 }
 
 re_method_str = r"({})".format("|".join(http_methods))
@@ -78,9 +76,6 @@ re_path_str = r"(/[^ ]*)"
 re_protocol_str = r"({})".format("|".join(http_protocols))
 re_http_first_line_str = r"^" + re_method_str + r" " + re_path_str + r" " + re_protocol_str + r"\r?$"
 
-# re_method = re.compile(re_method_str, IGNORECASE)
-# re_url = re.compile(re_path_str, IGNORECASE)
-# re_protocol = re.compile(re_protocol_str, IGNORECASE)
 re_http_first_line = re.compile(re_http_first_line_str, IGNORECASE)
 
 def get_lines(req, term):
@@ -116,29 +111,57 @@ def create_headers(headers):
         header += "{}: {}\r\n".format(k, headers[k])
     return header
 
-def create_date():
-    if USE_RTC:
-        date = rtc.datetime()
-        y = str(date[0])
-        mo = month.get(date[1])
-        wd = week_days.get(date[3])
-        d = date[2]
-        h = date[4]
-        m = date[5]
-        s = date[6]
-    else:
-        # TODO: Timezone correction
-        date = datetime.now()
-        y = date.year
-        mo = month.get(date.month)
-        wd = week_days.get(date.weekday())
-        d = date.day
-        h = date.hour
-        m = date.minute
-        s = date.second
-    date_str = "{wd}, {d:02} {mo} {y}, {h:02}:{m:02}:{s:02} GMT".format(
-        wd=wd, d=d, mo=mo, y=y, h=h, m=m, s=s)
-    return date_str
+# def create_date():
+    # week_days = {
+    #     0: "Sun",
+    #     1: "Mon",
+    #     2: "Wed",
+    #     3: "Thu",
+    #     4: "Fri",
+    #     5: "Sat",
+    #     6: "Sun",
+    # }
+
+    # month = {
+    #     1: "Jan",
+    #     2: "Feb",
+    #     3: "Mar",
+    #     4: "Apr",
+    #     5: "May",
+    #     6: "Jun",
+    #     7: "Jul",
+    #     8: "Aug",
+    #     9: "Sep",
+    #     10: "Oct",
+    #     11: "Nov",
+    #     12: "Dec",
+    # }
+#     if USE_RTC:
+#         date = rtc.datetime()
+#         y = str(date[0])
+#         mo = month.get(date[1])
+#         wd = week_days.get(date[3])
+#         d = date[2]
+#         h = date[4]
+#         m = date[5]
+#         s = date[6]
+#     else:
+#         # TODO: Timezone correction
+#         date = datetime.now()
+#         y = date.year
+#         mo = month.get(date.month)
+#         wd = week_days.get(date.weekday())
+#         d = date.day
+#         h = date.hour
+#         m = date.minute
+#         s = date.second
+#     date_str = "{wd}, {d:02} {mo} {y}, {h:02}:{m:02}:{s:02} GMT".format(
+#         wd=wd, d=d, mo=mo, y=y, h=h, m=m, s=s)
+#     return date_str
+
+def guess_mime_type(path):
+    extension = "." + path.split(".")[-1].lower()
+    return mime_types.get(extension, HEADER_DEFAULT_CONTENT_TYPE)
 
 
 class HTTPRequest(object):
@@ -212,18 +235,22 @@ class HTTPResponse(object):
                 status_code=self.status_code,
                 reason=self.reason,
                 headers=create_headers(self.headers),
-                data=self.data if self.data else ""
+                data=self.data if self.data and not self.is_binary_data() else ""
             ))
 
+    def is_binary_data(self):
+        return isinstance(self.data, bytes)
+
     def encoded(self):
-        return str(self).encode(BASE_ENCODING)
+        response = str(self).encode(BASE_ENCODING)
+        if self.is_binary_data():
+            response = response + self.data
+        return response
 
     def _create_basic_headers(self):
         self._headers_lower = [k.lower() for k in self.headers.keys()]
-        # if "data" not in self._headers_lower:
-        #     self.headers["Date"] = # TODO
-        if "date" not in self._headers_lower:
-            self.headers["Date"] = create_date()
+        # if "date" not in self._headers_lower:
+        #     self.headers["Date"] = create_date()
         if "server" not in self._headers_lower:
             self.headers["Server"] = HEADER_DEFAULT_SERVER
         if "connection" not in self._headers_lower:
@@ -231,11 +258,45 @@ class HTTPResponse(object):
         if "content-length" not in self._headers_lower:
             if self.data:
                 self.headers["Content-Length"] = len(self.data)
-            else:
-                self.headers["Content-Length"] = 0
+            # else:
+            #     self.headers["Content-Length"] = 0
         if "content-type" not in self._headers_lower:
             if self.data:
-                self.headers["Content-Type"] = HEADER_DEFAULT_CONTENT_TYPE
+                if self.is_binary_data():
+                    self.headers["Content-Type"] = HEADER_DEFAULT_BINARY_TYPE
+                else:
+                    self.headers["Content-Type"] = HEADER_DEFAULT_CONTENT_TYPE
+
+class HTTPFileResponse(HTTPResponse):
+    def __init__(self, filepath, status_code=200, headers={}, protocol="HTTP/1.1", mime_type=None):
+        super().__init__(data=b"", status_code=status_code, headers=headers, protocol=protocol)
+        self.filepath = filepath
+        self.set_mime_type(mime_type)
+        self.set_content_length()
+        # Let this escalate. The creator shall handle the errors.
+        self._file = open(filepath, "rb")
+
+    def __del__(self):
+        self.close()
+
+    def set_mime_type(self, mime_type=None):
+        if mime_type is None:
+            mime_type = guess_mime_type(self.filepath)
+        self.headers["Content-Type"] = mime_type
+
+    def set_content_length(self, length=None):
+        if length is None:
+            length = os.stat(self.filepath)[6]
+        self.length = length
+        self.headers["Content-Length"] = length
+
+    def get_chunk(self, chunk_size=1000):
+        return self._file.read(chunk_size)
+
+    def close(self):
+        if self._file:
+            self._file.close()
+            self._file = None
 
 class HTTPServer(object):
     def __init__(self, routes, server_address=("", 80)):
@@ -265,9 +326,6 @@ class HTTPServer(object):
             except Exception as exc:
                 self.bad_request(str(exc))
                 continue
-            print("<" * 20)
-            print(request)
-            print("<" * 20)
 
             # Get the route and execute the callback
             cb = self._get_route_cb(request)
@@ -354,14 +412,20 @@ class HTTPServer(object):
         self.finish(response)
 
     def finish(self, response):
-        print(">" * 20)
-        print(response)
-        print(">" * 20)
-        self.remote_socket.send(response.encoded())
+        if isinstance(response, HTTPFileResponse):
+            self.remote_socket.send(response.encoded())
+            while True:
+                chunk = response.get_chunk()
+                if not chunk:
+                    break
+                try:
+                    self.remote_socket.sendall(chunk)
+                except OSError:
+                    break
+            response.close()
+        else:
+            self.remote_socket.send(response.encoded())
         self.remote_socket.close()
-
-def make_response(data, status_code=200, headers={}):
-    return HTTPResponse(data=data, status_code=status_code, headers=headers)
 
 def jsonify(data, status_code=200, headers={}):
     headers["Content-Type"] = "application/json"
