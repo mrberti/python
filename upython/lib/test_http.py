@@ -2,8 +2,16 @@
 from http_serv import *
 try:
     import utils
+    import machine
+    machine.freq(160000000)
     utils.do_connect()
 except:
+    pass
+
+try:
+    import ntptime
+    ntptime.settime()
+except ImportError:
     pass
 
 def index(request):

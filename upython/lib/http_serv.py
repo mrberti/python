@@ -4,9 +4,20 @@ Extremely simple and basic HTTP handling! Do not expect anything.
 import json
 import re
 import socket
+import time # delete
+
+# wrap datetime handling
+try:
+    from machine import RTC
+    rtc = RTC()
+    USE_RTC = True
+except ImportError:
+    from datetime import datetime
+    USE_RTC = False
 
 HEADER_DEFAULT_SERVER = "http_serv/0.0.1a"
 HEADER_DEFAULT_CONTENT_TYPE = "text/plain"
+BASE_ENCODING = "utf-8"
 
 try:
     IGNORECASE = re.IGNORECASE
@@ -35,6 +46,31 @@ http_status_codes = {
     400: "Bad Request",
     404: "Not Found",
     505: "HTTP Version not supported",
+}
+
+week_days = {
+    0: "Sun",
+    1: "Mon",
+    2: "Wed",
+    3: "Thu",
+    4: "Fri",
+    5: "Sat",
+    6: "Sun",
+}
+
+month = {
+    1: "Jan",
+    2: "Feb",
+    3: "Mar",
+    4: "Apr",
+    5: "May",
+    6: "Jun",
+    7: "Jul",
+    8: "Aug",
+    9: "Sep",
+    10: "Oct",
+    11: "Nov",
+    12: "Dec",
 }
 
 re_method_str = r"({})".format("|".join(http_methods))
@@ -79,6 +115,38 @@ def create_headers(headers):
     for k in headers.keys():
         header += "{}: {}\r\n".format(k, headers[k])
     return header
+
+def create_date():
+    if USE_RTC:
+        date = rtc.datetime()
+        y = str(date[0])
+        mo = month.get(date[1])
+        d = "{:02}".format(date[2])
+        wd = week_days.get(date[3])
+        h = "{:02}".format(date[4])
+        m = "{:02}".format(date[5])
+        s = "{:02}".format(date[6])
+    else:
+        # TODO: Timezone correction
+        date = datetime.now()
+        y = date.year
+        mo = month.get(date.month)
+        d = date.day
+        wd = week_days.get(date.weekday())
+        h = date.hour
+        m = date.minute
+        s = date.second
+    date_str = "{wd}, {d} {mo} {y}, {h}:{m}:{s} GMT".format(
+        wd=wd,
+        d=d,
+        mo=mo,
+        y=y,
+        h=h,
+        m=m,
+        s=s
+    )
+    return date_str
+
 
 class HTTPRequest(object):
     def __init__(self, request=None):
@@ -140,12 +208,14 @@ class HTTPResponse(object):
             ))
 
     def encoded(self):
-        return str(self).encode("ascii")
+        return str(self).encode(BASE_ENCODING)
 
     def _create_basic_headers(self):
         self._headers_lower = [k.lower() for k in self.headers.keys()]
         # if "data" not in self._headers_lower:
         #     self.headers["Date"] = # TODO
+        if "date" not in self._headers_lower:
+            self.headers["Date"] = create_date()
         if "server" not in self._headers_lower:
             self.headers["Server"] = HEADER_DEFAULT_SERVER
         if "connection" not in self._headers_lower:
@@ -180,7 +250,8 @@ class HTTPServer(object):
             print("Wating for clients...")
             self.remote_socket, remote_info = self.socket.accept()
             print("Remote connected: {}".format(remote_info))
-            recv = self.remote_socket.recv(1024).decode("ascii")
+            start = time.time_ns()
+            recv = self.remote_socket.recv(1024).decode(BASE_ENCODING)
             try:
                 request = HTTPRequest(recv)
             except Exception as exc:
@@ -230,8 +301,12 @@ class HTTPServer(object):
                 else:
                     response = HTTPResponse(data, status_code, headers)
             self.finish(response)
+            print("Required ms: ", (time.time_ns() - start) / 1000000)
 
     def _get_route_cb(self, request):
+        # TODO:
+        # - dynamic parameters
+        # - regular expressions for paths
         for route in self.routes:
             if request.path == route[0]:
                 if len(route) < 3:
