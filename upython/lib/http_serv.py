@@ -121,22 +121,22 @@ def create_date():
         date = rtc.datetime()
         y = str(date[0])
         mo = month.get(date[1])
-        d = "{:02}".format(date[2])
         wd = week_days.get(date[3])
-        h = "{:02}".format(date[4])
-        m = "{:02}".format(date[5])
-        s = "{:02}".format(date[6])
+        d = date[2]
+        h = date[4]
+        m = date[5]
+        s = date[6]
     else:
         # TODO: Timezone correction
         date = datetime.now()
         y = date.year
         mo = month.get(date.month)
-        d = date.day
         wd = week_days.get(date.weekday())
+        d = date.day
         h = date.hour
         m = date.minute
         s = date.second
-    date_str = "{wd}, {d} {mo} {y}, {h}:{m}:{s} GMT".format(
+    date_str = "{wd}, {d:02} {mo} {y}, {h:02}:{m:02}:{s:02} GMT".format(
         wd=wd,
         d=d,
         mo=mo,
