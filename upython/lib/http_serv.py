@@ -266,6 +266,9 @@ class HTTPResponse(object):
                     self.headers["Content-Type"] = HEADER_DEFAULT_BINARY_TYPE
                 else:
                     self.headers["Content-Type"] = HEADER_DEFAULT_CONTENT_TYPE
+        if "access-control-allow-origin" not in self._headers_lower:
+            # experimental
+            self.headers["Access-Control-Allow-Origin"] = "*"
 
 class HTTPFileResponse(HTTPResponse):
     def __init__(self, filepath, status_code=200, headers={}, protocol="HTTP/1.1", mime_type=None):
