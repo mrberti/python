@@ -5,7 +5,6 @@ For small devices, e.g. ESP8266, it is required to compile this file
 into a *.mpy file. Use the `mpy_cross` tool to do that.
 """
 import json
-import re
 import socket
 import os
 import time # delete
@@ -16,19 +15,18 @@ try:
     from machine import RTC
     rtc = RTC()
     USE_RTC = True
+    IS_MICROPYTHON = True
 except ImportError:
     from datetime import datetime
     USE_RTC = False
+    IS_MICROPYTHON = False
 
 HEADER_DEFAULT_SERVER = "http_serv/0.0.1a"
 HEADER_DEFAULT_CONTENT_TYPE = "text/plain"
 HEADER_DEFAULT_BINARY_TYPE = "application/octet-stream"
-BASE_ENCODING = "utf-8"
-
-try:
-    IGNORECASE = re.IGNORECASE
-except AttributeError:
-    IGNORECASE = 2
+HEADER_ENCODING = "ascii"
+RECV_BUF_SIZE = 1024
+SEND_CHUNK_SIZE = 1024
 
 http_methods = [
     "GET",
@@ -75,40 +73,6 @@ mime_types = {
     ".xhtml": "application/xhtml+xml",
     ".zip": "application/zip",
 }
-
-re_method_str = r"({})".format("|".join(http_methods))
-re_path_str = r"(/[^ ]*)"
-re_protocol_str = r"({})".format("|".join(http_protocols))
-re_http_first_line_str = r"^" + re_method_str + r" " + re_path_str + r" " + re_protocol_str + r"\r?$"
-
-re_http_first_line = re.compile(re_http_first_line_str, IGNORECASE)
-
-def get_lines(req, term):
-    return req.split(term)
-
-def splitted_packet(req):
-    rnrn = req.find("\r\n\r\n")
-    nn = req.find("\n\n")
-    if rnrn > 0 and nn < 0:
-        pos = rnrn + 4
-        term = "\r\n"
-    elif nn > 0 and rnrn < 0:
-        pos = nn + 2
-        term = "\n"
-    else:
-        raise NotImplementedError("Package splitting needs to be improved")
-    return (req[0:pos], req[pos:], term)
-
-def parse_headers(lines):
-    headers = {}
-    for line in lines:
-        if line:
-            try:
-                k, v = line.split(": ")
-                headers[k] = v.lower()
-            except ValueError:
-                raise Exception("INVALID HEADER: {}".format(line))
-    return headers
 
 def create_headers(headers):
     header = ""
@@ -170,35 +134,76 @@ def guess_mime_type(path):
 
 
 class HTTPRequest(object):
-    def __init__(self, request=None):
-        if request is None:
-            self.method = None
-            self.url = None
-            self.path = None
-            self.path_matches = []
-            self.params = {}
-            self.protocol = None
-            self.is_1_0 = None
-            self.headers = {}
-            self.data = None
-            self.term = None
-        else:
-            self.parse(request)
-
-    def parse(self, request):
-        http, self.data, self.term = splitted_packet(request)
-        lines = get_lines(http, self.term)
-        match = re_http_first_line.search(lines[0])
-        self.method = match.group(1)
-        self.url = match.group(2)
-        self.protocol = match.group(3)
-        self.is_1_0 = "1.0" in self.protocol
-        self.headers = parse_headers(lines[1:])
-        self.method = self.method.upper()
+    def __init__(self, socket=None):
+        self.method = None
+        self.url = None
+        self.path = None
         self.path_matches = []
+        self.params = {}
+        self.protocol = None
+        self.is_1_0 = None
+        self.headers = {}
+        self.data = None
+        if socket is not None:
+            self.parse(socket)
+
+    def parse(self, socket):
+        # See also:
+        # https://github.com/micropython/micropython/blob/master/examples/network/http_server.py
+        if IS_MICROPYTHON:
+            stream = socket
+        else:
+            stream = socket.makefile("rwb")
+
+        # First Line
+        first_line = stream.readline().decode(HEADER_ENCODING).strip()
+        print("<" * 40)
+        print(first_line)
+        try:
+            self.method, self.url, self.protocol = first_line.split(" ")
+        except ValueError:
+            raise Exception("The first line is not valid HTTP: {}".format(first_line))
+        self.method = self.method.upper()
+        if self.method not in http_methods:
+            raise Exception("Unsupported HTTP method: {}".format(self.method))
+        self.protocol = self.protocol.upper()
+        if self.protocol not in http_protocols:
+            raise Exception("Unsupported HTTP protocol: {}".format(self.protocol))
+        self.is_1_0 = "1.0" in self.protocol
         self.parse_url()
 
+        # Headers (until empty line found)
+        while True:
+            line = stream.readline().decode(HEADER_ENCODING)
+            if line == "\r\n":
+                break
+            try:
+                k, v = line.strip().split(": ")
+                self.headers[k.lower()] = v
+            except ValueError:
+                raise Exception("Invalid header: {}".format(line))
+        print(create_headers(self.headers))
+
+        # Data
+        data_length = int(self.headers.get("content-length", 0))
+        if data_length > 0:
+            # HACK: This is still a little bit strange...
+            socket.settimeout(10.)
+            if IS_MICROPYTHON:
+                self.data = stream.recv(1024)
+            else:
+                self.data = stream.peek()
+            if len(self.data) > 40:
+                print(self.data[0:20], "...", self.data[-20:])
+            else:
+                print(self.data)
+
+        if not IS_MICROPYTHON:
+            stream.close()
+        print("<" * 40)
+
     def parse_url(self):
+        self.path_matches = []
         self.params = {}
         splitted_url = self.url.split("?")
         self.path = splitted_url[0]
@@ -222,10 +227,13 @@ class HTTPRequest(object):
             ))
 
 class HTTPResponse(object):
-    def __init__(self, data, status_code=200, headers={}, protocol="HTTP/1.1"):
+    def __init__(self, data, status_code=200, headers=None, protocol="HTTP/1.1"):
         self.status_code = status_code
         self.reason = http_status_codes.get(status_code, "NA")
-        self.headers = headers
+        if headers is None:
+            self.headers = {}
+        else:
+            self.headers = headers
         self.data = data
         self.protocol = protocol.upper()
         self._create_basic_headers()
@@ -247,7 +255,7 @@ class HTTPResponse(object):
         return isinstance(self.data, bytes)
 
     def encoded(self):
-        response = str(self).encode(BASE_ENCODING)
+        response = str(self).encode(HEADER_ENCODING)
         if self.is_binary_data():
             response = response + self.data
         return response
@@ -276,7 +284,7 @@ class HTTPResponse(object):
             self.headers["Access-Control-Allow-Origin"] = "*"
 
 class HTTPFileResponse(HTTPResponse):
-    def __init__(self, filepath, status_code=200, headers={}, protocol="HTTP/1.1", mime_type=None):
+    def __init__(self, filepath, status_code=200, headers=None, protocol="HTTP/1.1", mime_type=None):
         super().__init__(data=b"", status_code=status_code, headers=headers, protocol=protocol)
         self.filepath = filepath
         self.set_mime_type(mime_type)
@@ -298,7 +306,7 @@ class HTTPFileResponse(HTTPResponse):
         self.length = length
         self.headers["Content-Length"] = length
 
-    def get_chunk(self, chunk_size=1000):
+    def get_chunk(self, chunk_size=SEND_CHUNK_SIZE):
         return self._file.read(chunk_size)
 
     def close(self):
@@ -310,8 +318,6 @@ class HTTPServer(object):
     def __init__(self, routes, server_address=("", 80)):
         self.routes = routes
         self.server_address = server_address
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.running = False
 
     def __del__(self):
@@ -321,6 +327,8 @@ class HTTPServer(object):
         self.socket.close()
 
     def run(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.server_address)
         self.socket.listen(5)
         self.running = True
@@ -329,12 +337,10 @@ class HTTPServer(object):
             self.remote_socket, remote_info = self.socket.accept()
             print("Remote connected: {}".format(remote_info))
             start = time.time_ns()
-            recv = self.remote_socket.recv(1024).decode(BASE_ENCODING)
-            print("<" * 40)
-            print(recv)
-            print("<" * 40)
+
+            # Parse the HTTP Request
             try:
-                request = HTTPRequest(recv)
+                request = HTTPRequest(self.remote_socket)
             except Exception as exc:
                 self.bad_request(str(exc))
                 continue
@@ -344,7 +350,11 @@ class HTTPServer(object):
             if not cb:
                 self.not_found()
                 continue
-            cb_res = cb(request)
+            try:
+                cb_res = cb(request)
+            except Exception as exc:
+                self.internal_error(str(exc))
+                continue
 
             # Parse the result of the callback
             # Result can be:
@@ -383,7 +393,8 @@ class HTTPServer(object):
                     response = HTTPResponse(data, status_code, headers)
             self.finish(response)
             print("Required time: {} ms".format((time.time_ns() - start) / 1000000))
-            print("Memory free: {} kB".format(gc.mem_free() / 1024))
+            if IS_MICROPYTHON:
+                print("Memory free: {} kB".format(gc.mem_free() / 1024))
 
     def _get_route_cb(self, request):
         # TODO:
@@ -423,6 +434,10 @@ class HTTPServer(object):
     def not_found(self, data=None):
         response = HTTPResponse(data, 404)
         self.finish(response)
+    
+    def internal_error(self, data=None):
+        response = HTTPResponse(data, 500)
+        self.finish(response)
 
     def finish(self, response):
         if isinstance(response, HTTPFileResponse):
@@ -443,7 +458,9 @@ class HTTPServer(object):
         print(response)
         print(">" * 40)
 
-def jsonify(data, status_code=200, headers={}):
+def jsonify(data, status_code=200, headers=None):
+    if headers is None:
+        headers = {}
     headers["Content-Type"] = "application/json"
     data = json.dumps(data)
     return HTTPResponse(data, status_code, headers)
