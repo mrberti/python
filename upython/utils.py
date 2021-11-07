@@ -67,6 +67,7 @@ def do_connect(essid=None, password=None):
         while not STA_IF.isconnected():
             pass
     print('Connected to Wifi. ', STA_IF.ifconfig())
+    return STA_IF.ifconfig()
 
 def go_to_sleep(sleep_ms):
     """
