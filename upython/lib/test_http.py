@@ -7,14 +7,12 @@ try:
     import machine
     import ntptime
     import board
-    from rf433 import RF433
+    import rf433
     machine.freq(160000000)
-    utils.STA_IF.config(dhcp_hostname="http_serv")
-    utils.do_connect()
-    ntptime.settime()
     LED = utils.LED(board.LED_PIN_NO, board.LED_LOGIC_INVERTED)
-    RF433 = RF433(board.TX_PIN_NO)
-    HOST = utils.STA_IF.ifconfig()[0]
+    RF433 = rf433.RF433(board.TX_PIN_NO)
+    HOST = utils.do_connect()[0]
+    ntptime.settime()
 except ImportError:
     HOST = "localhost"
 
@@ -108,7 +106,7 @@ def api_rf(request):
             ch_code = CODE_DICT.get(ch)
             if ch_code:
                 code = ch_code.get(state)
-                rf433.send_code(code, retries)
+                RF433.send_code(code, retries)
                 channels_set.append(ch)
     if not channels_set:
         return "parameter `ch#` was not set", 400
@@ -124,4 +122,10 @@ routes = [
 ]
 
 server = http.HTTPServer(routes)
-server.run()
+try:
+    server.run()
+except KeyboardInterrupt:
+    print("User cancelled")
+except Exception as exc:
+    print("Exception: {}".format(exc))
+    machine.reset()
