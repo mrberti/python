@@ -330,6 +330,9 @@ class HTTPServer(object):
             print("Remote connected: {}".format(remote_info))
             start = time.time_ns()
             recv = self.remote_socket.recv(1024).decode(BASE_ENCODING)
+            print("<" * 40)
+            print(recv)
+            print("<" * 40)
             try:
                 request = HTTPRequest(recv)
             except Exception as exc:
@@ -436,6 +439,9 @@ class HTTPServer(object):
         else:
             self.remote_socket.send(response.encoded())
         self.remote_socket.close()
+        print(">" * 40)
+        print(response)
+        print(">" * 40)
 
 def jsonify(data, status_code=200, headers={}):
     headers["Content-Type"] = "application/json"
