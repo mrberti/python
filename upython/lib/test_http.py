@@ -15,6 +15,18 @@ try:
     ntptime.settime()
 except ImportError:
     HOST = "localhost"
+    class LED():
+        def __init__(self):
+            self.state = False
+        def on(self):
+            self.state = True
+        def off(self):
+            self.state = False
+        def toggle(self):
+            self.state = not self.state
+        def is_on(self):
+            return self.state
+    LED = LED()
 
 gc.collect()
 
@@ -128,4 +140,7 @@ except KeyboardInterrupt:
     print("User cancelled")
 except Exception as exc:
     print("Exception: {}".format(exc))
-    machine.reset()
+    try:
+        machine.reset()
+    except:
+        pass
