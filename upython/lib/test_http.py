@@ -8,9 +8,12 @@ try:
     import ntptime
     import board
     import rf433
+    import gy21
     machine.freq(160000000)
     LED = utils.LED(board.LED_PIN_NO, board.LED_LOGIC_INVERTED)
     RF433 = rf433.RF433(board.TX_PIN_NO)
+    I2C = machine.I2C(freq=400000, scl=machine.Pin(board.SCL_PIN_NO), sda=machine.Pin(board.SDA_PIN_NO))
+    GY21 = gy21.GY21(I2C)
     HOST = utils.do_connect()[0]
     ntptime.settime()
 except ImportError:
@@ -126,10 +129,36 @@ def api_rf(request):
     result = {"rf": params}
     return result
 
+def api_room(request):
+    params = request.params
+    type = params.get("type", "").lower()
+
+    if type == "temp":
+        meas_val = GY21.measure_temperature()
+        result = {
+            "temperature": meas_val,
+            "temperature_unit": GY21.unit_temperature
+        }
+    elif type == "humidity":
+        meas_val = GY21.measure_humidity()
+        result = {
+            "humidity": meas_val,
+            "humidity_unit": GY21.unit_humidity
+        }
+    else:
+        result = {
+            "temperature": GY21.measure_temperature(),
+            "temperature_unit": GY21.unit_temperature,
+            "humidity": GY21.measure_humidity(),
+            "humidity_unit": GY21.unit_humidity
+        }
+    return result
+
 routes = [
     ("/", index),
     ("/api/led", api_led, ["GET", "POST"]),
     ("/api/rf", api_rf, ["POST"]),
+    ("/api/room", api_room, ["GET"]),
     (re.compile(r"^/(.+\..+)"), static),
 ]
 
