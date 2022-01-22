@@ -69,6 +69,12 @@ def do_connect(essid=None, password=None):
     print('Connected to Wifi. ', STA_IF.ifconfig())
     return STA_IF.ifconfig()
 
+def is_connected():
+    return STA_IF.isconnected()
+
+def host():
+    return STA_IF.ifconfig()[0]
+
 def go_to_sleep(sleep_ms):
     """
     Borowed from: http://docs.micropython.org/en/v1.9.2/esp8266/esp8266/tutorial/powerctrl.html

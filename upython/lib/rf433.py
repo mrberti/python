@@ -11,8 +11,7 @@ DELAY_US_LONG = 3 * 355
 if "8266" in board.__CPU__:
     TIMING_CORRECTION_US = 220
 elif "esp32" in board.__CPU__:
-    # TODO
-    TIMING_CORRECTION_US = 0
+    TIMING_CORRECTION_US = 200
 else:
     raise NotImplementedError("No TIMING_CORRECTION_US defined.")
 

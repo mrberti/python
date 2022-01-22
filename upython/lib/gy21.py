@@ -39,8 +39,8 @@ class GY21:
 
     def measure(self):
         """Measure humidity and temperature. Returns a `dict`."""
-        value_t = 0
-        value_rh = 0
+        value_t = self.measure_temperature()
+        value_rh = self.measure_humidity()
         return {
             "temperature" : value_t,
             "unit_temperature": self.unit_temperature,

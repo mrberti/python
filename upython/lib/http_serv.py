@@ -333,7 +333,7 @@ class HTTPServer(object):
         self.socket.listen(5)
         self.running = True
         while self.running:
-            print("Wating for clients...")
+            print("Waiting for clients...")
             self.remote_socket, remote_info = self.socket.accept()
             print("Remote connected: {}".format(remote_info))
             start = time.time_ns()

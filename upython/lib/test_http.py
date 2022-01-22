@@ -9,15 +9,14 @@ try:
     import board
     import rf433
     import gy21
-    machine.freq(160000000)
+    # machine.freq(160000000)
+    # Creating HW interfaces
     LED = utils.LED(board.LED_PIN_NO, board.LED_LOGIC_INVERTED)
     RF433 = rf433.RF433(board.TX_PIN_NO)
     I2C = machine.I2C(freq=400000, scl=machine.Pin(board.SCL_PIN_NO), sda=machine.Pin(board.SDA_PIN_NO))
     GY21 = gy21.GY21(I2C)
-    HOST = utils.do_connect()[0]
-    ntptime.settime()
 except ImportError:
-    HOST = "localhost"
+    # For usage on normal PC
     class LED():
         def __init__(self):
             self.state = False
@@ -35,7 +34,7 @@ gc.collect()
 
 import http_serv as http
 
-
+HOST = "localhost"
 STATIC_DIR = "static/"
 TEMPLATES_DIR = STATIC_DIR + "templates/"
 
@@ -113,7 +112,7 @@ def api_rf(request):
     `/api/rf?ch1=on&ch2=off&retries=10`
     """
     params = request.params
-    retries = int(params.get("retries", 10))
+    retries = int(params.get("retries", 20))
     channels_set = []
     for ch in CODE_DICT.keys():
         if ch in params:
@@ -162,6 +161,15 @@ routes = [
     (re.compile(r"^/(.+\..+)"), static),
 ]
 
+#%% CONNECT
+LED.on()
+while not utils.is_connected():
+    utils.do_connect()
+HOST = utils.host()
+ntptime.settime()
+LED.off()
+
+#%% RUN SERVER
 server = http.HTTPServer(routes)
 try:
     server.run()

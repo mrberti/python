@@ -6,6 +6,11 @@ var btnLedOff = document.getElementById('btnLedOff');
 var btnLedToggle = document.getElementById('btnLedToggle');
 var btnCh1On = document.getElementById('btnCh1On');
 var btnCh1Off = document.getElementById('btnCh1Off');
+var btnGetRoom = document.getElementById('btnGetRoom');
+var temperatureValue = document.getElementById('temperatureValue');
+var humidityValue = document.getElementById('humidityValue');
+var temperatureUnit = document.getElementById('temperatureUnit');
+var humidityUnit = document.getElementById('humidityUnit');
 
 function apiResponseHandler() {
     var data = JSON.parse(this.responseText);
@@ -25,6 +30,16 @@ function apiResponseHandler() {
         btnLedOff.classList.remove("btn-danger");
         btnLedOff.classList.add("btn-outline-danger");
     }
+
+    if (data.temperature) {
+        temperatureValue.innerText = data.temperature.toFixed(1);
+        temperatureUnit.innerText = data.temperature_unit;
+    }
+    if (data.humidity) {
+        humidityValue.innerText = data.humidity.toFixed(1);
+        humidityUnit.innerText = data.humidity_unit;
+    }
+
     spinnerLed.style.display = "None";
 }
 
@@ -81,6 +96,20 @@ btnCh3On.addEventListener("click", function () {
 
 btnCh3Off.addEventListener("click", function () {
     sendRequest("POST", "/api/rf?ch3=off");
+});
+
+/* room */
+var measureInterval;
+btnGetRoom.addEventListener("click", function () {
+    if (!measureInterval) {
+        measureInterval = setInterval(() => {
+            sendRequest("GET", "/api/room");
+        }, 1000);
+        btnGetRoom.innerHtml = "Stop Measurement";
+    } else {
+        measureInterval = clearInterval(measureInterval);
+        btnGetRoom.innerHtml = "Start Measurement";
+    }
 });
 
 /* MAIN */

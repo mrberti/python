@@ -121,7 +121,7 @@ def main():
 
 # Initialize hardware
 LED = utils.LED(board.LED_PIN_NO, inverted=board.LED_LOGIC_INVERTED)
-TX = machine.Pin(23, machine.Pin.OUT)
+TX = machine.Pin(PIN_TX, machine.Pin.OUT)
 utils.do_connect()
 
 SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
