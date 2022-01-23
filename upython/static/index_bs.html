@@ -19,6 +19,11 @@
 <body class="bg-light">
 
   <div id="app">
+
+    <div v-show="isActiveFetch" class="spinner-border position-fixed bottom-0 end-0" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+
     <div class="container border rounded my-5 py-3 bg-white" style="max-width: 800px;">
       <header class="mb-3">
         <h1>ESP Control</h1>
@@ -28,6 +33,19 @@
               <label for="host" class="form-label">Host</label>
               <input type="text" id="host" class="form-control" v-model="host">
             </div>
+          </div>
+          <div class="col-12">
+            <div class="form-outline">
+              <label for="interval" class="form-label">Interval</label>
+              <input type="text" id="interval" class="form-control" v-model="interval">
+            </div>
+          </div>
+          <div class="col-12">
+            <button id="btnIntervalOn" class="btn btn-outline-success" :class="{active: intervalHandler}"
+              @click="setIntervalState(true)">Start</button>
+            <button id="btnIntervalOff" class="btn btn-outline-danger" :class="{active: !intervalHandler}"
+              @click="setIntervalState(false)">Stop</button>
+            <button class="btn btn-outline-primary" @click="getRoomMeasurements()">Single Measurement</button>
           </div>
         </div>
       </header>
@@ -39,7 +57,7 @@
               <div class="bg-primary text-white p-3 rounded m-auto shadow-sm" style="max-width: 14rem">
                 <div class="position-relative">
                   <p>Temperature</p>
-                  <h2><span>123</span>&nbsp;<span>°C</span></h2>
+                  <h2><span>{{temperature}}</span>&nbsp;<span>°C</span></h2>
                   <div class="position-absolute top-50 end-0 translate-middle-y">
                     <i class="bi-thermometer-half" style="font-size: 4rem; color: #2196F3;"></i>
                   </div>
@@ -50,7 +68,7 @@
               <div class="bg-primary text-white p-3 rounded mx-auto shadow-sm" style="max-width: 14rem">
                 <div class="position-relative">
                   <p>Humidity</p>
-                  <h2><span>123</span>&nbsp;<span>%</span></h2>
+                  <h2><span>{{humidity}}</span>&nbsp;<span>%</span></h2>
                   <div class="position-absolute top-50 end-0 translate-middle-y">
                     <i class="bi-moisture" style="font-size: 4rem; color: #2196F3;"></i>
                   </div>
@@ -68,8 +86,10 @@
                 <div class="position-relative">
                   <p>Channel {{channel}}</p>
                   <div class="btn-group">
-                    <button :id="`btnRf433OnCh${channel}`"type="button" class="btn btn-outline-success" @click="btnRf433Click($event, channel, true)">On</button>
-                    <button :id="`btnRf433OffCh${channel}`" type="button" class="btn btn-outline-danger" @click="btnRf433Click($event, channel, false)">Off</button>
+                    <button :id="`btnRf433OnCh${channel}`" type="button" class="btn btn-outline-success"
+                      @click="btnRf433Click($event, channel, true)">On</button>
+                    <button :id="`btnRf433OffCh${channel}`" type="button" class="btn btn-outline-danger"
+                      @click="btnRf433Click($event, channel, false)">Off</button>
                   </div>
                   <div class="position-absolute top-50 end-0 translate-middle-y">
                     <i class="bi-lightbulb-x" style="font-size: 4rem; color: #E0E0E0;">{{channel}}</i>
@@ -124,22 +144,6 @@
           <button id="btnLedOff" type="button" class="btn btn-outline-danger">Off</button>
         </div>
         <button id="btnLedToggle" type="button" class="btn btn-outline-primary">Toggle</button>
-
-        <div>
-          <h2>RF 433 MHz</h2>
-          <div class="btn-group" role="group">
-            <button id="btnCh1On" type="button" class="btn btn-outline-success">On</button>
-            <button id="btnCh1Off" type="button" class="btn btn-outline-danger">Off</button>
-          </div>
-          <div class="btn-group" role="group">
-            <button id="btnCh2On" type="button" class="btn btn-outline-success">On</button>
-            <button id="btnCh2Off" type="button" class="btn btn-outline-danger">Off</button>
-          </div>
-          <div class="btn-group" role="group">
-            <button id="btnCh3On" type="button" class="btn btn-outline-success">On</button>
-            <button id="btnCh3Off" type="button" class="btn btn-outline-danger">Off</button>
-          </div>
-        </div>
       </div>
     </div> -->
 
@@ -159,14 +163,87 @@
       data: {
         counter: 'Hello Vue!',
         rf433Channels: [1, 2, 3],
-        host: "http://192.168.1.66",
+        isActiveFetch: false,
+        host: "http://192.168.1.60",
+        interval: 3000,
+        intervalHandler: null,
+        temperature: "---",
+        humidity: "---",
       },
       methods: {
-        btnRf433Click: function(event, channel, state) {
-          var t = event.target;
-          t.classList.toggle("active");
-        }
+        btnRf433Click: function (event, channel, state) {
+          var ressource = `/api/rf?ch${channel}=${state ? "on" : "off"}`;
+          this.isActiveFetch = true;
+          fetch(this.host + ressource, { method: "POST" }).then(r => r.json()).then(d => {
+            console.log(d);
+            // Update button active states
+            var btnOther = `btnRf433${state ? "Off" : "On"}Ch${channel}`;
+            document.getElementById(btnOther).classList.remove("active");
+            event.target.classList.add("active");
+            x = event.target;
+            this.isActiveFetch = false;
+          }).catch(e => {
+            this.isActiveFetch = false;
+          });
+        },
+        test: async function() {
+          this.isActiveFetch = true;
+          try {
+            var d = await fetch(this.host + "/api/led").then(r => r.json());
+            console.log(d);
+          }
+          finally {
+            this.isActiveFetch = false;
+          };
+        },
+        getRoomMeasurements: async function () {
+          this.isActiveFetch = true;
+          try {
+            var d = await fetch(this.host + "/api/room").then(r => r.json());
+            console.log(d);
+            if (d.temperature) {
+              this.temperature = d.temperature.toFixed(1);
+            }
+            else {
+              this.temperature = "---";
+            }
+            if (d.humidity) {
+              this.humidity = d.humidity.toFixed(1);
+            }
+            else {
+              this.humidity = "---";
+            }
+            this.isActiveFetch = false;
+          }
+          finally {
+            this.isActiveFetch = false;
+          };
+        },
+        setIntervalState: function (state) {
+          if (state) {
+            if (this.intervalHandler) {
+              return;
+            }
+            this.getRoomMeasurements();
+            this.intervalHandler = setInterval(this.getRoomMeasurements, this.interval);
+          }
+          else {
+            if (!this.intervalHandler) {
+              return;
+            }
+            clearInterval(this.intervalHandler);
+            this.intervalHandler = null;
+          }
+        },
       },
+      // watch: {
+      //   interval: function() {
+      //     if (this.intervalHandler) {
+      //       this.setIntervalState(false);
+      //       this.setIntervalState(true);
+      //     }
+      //   },
+      // },
     })
   </script>
 
