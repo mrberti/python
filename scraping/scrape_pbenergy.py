@@ -91,7 +91,7 @@ def create_dataframe(values_energy, values_weather):
 def write_csv(outfilename, df):
     if os.path.exists(outfilename):
         df_old = pd.read_csv(outfilename)
-        df_new = df_old.append(df)
+        df_new = pd.concat([df_old, df])
     else:
         df_new = df
     df_new.to_csv(outfilename, index=False)
