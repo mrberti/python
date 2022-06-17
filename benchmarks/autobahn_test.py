@@ -1,5 +1,6 @@
-from utils import *
+import time
 import asyncio
+from utils import *
 
 from autobahn.asyncio.websocket import WebSocketServerProtocol, \
     WebSocketServerFactory
@@ -17,10 +18,8 @@ URI = f"ws://{IP}:{PORT}"
 ADDR = (IP, PORT)
 print(ADDR)
 
-N = 10
-DATA = b"x"*1024 * 2
-DATA = b"x"
-RCV_BUF = 1024 * 1
+N = 10000
+DATA = b"x"*1
 
 class ServerProtocol(WebSocketServerProtocol):
     def onConnect(self, request):
@@ -30,74 +29,68 @@ class ServerProtocol(WebSocketServerProtocol):
         print("WebSocket connection open.")
 
     def onMessage(self, payload, isBinary):
-        if isBinary:
-            print("Binary message received: {0} bytes".format(len(payload)))
-        else:
-            print("Text message received: {0}".format(payload.decode('utf8')))
+        # Echo
         self.sendMessage(payload, isBinary)
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
 
 class ClientProtocol(WebSocketClientProtocol):
-
     def onConnect(self, response):
         print(f"Connected to server: {response.peer}")
+        self.i = 0
+        self.t = init_t(N)
 
     def onConnecting(self, transport_details):
         print("Connecting; transport details: {}".format(transport_details))
-        return None  # ask for defaults
 
     def onOpen(self):
         print("WebSocket connection open.")
-
-        # def loop(loops, data):
-        # loops = N
-        # data = DATA
-        # t = init_t(loops)
-        # for i in range(loops):
-        #     t[i] = time.time()
-        #     self.sendMessage(data)
-        # self.sendClose()
-        # t = normalize_t(t)
-        # print_statistics(t, len(data), loops)
-        # plot_statistics(t)
-        # loop(1000, DATA)
+        self.t[self.i] = time.time()
+        self.i += 1
+        self.sendMessage(DATA)
 
     def onMessage(self, payload, isBinary):
-        if isBinary:
-            print("Binary message received: {0} bytes".format(len(payload)))
+        if self.i < N:
+            self.t[self.i] = time.time()
+            self.i += 1
+            self.sendMessage(payload)
         else:
-            print("Text message received: {0}".format(payload.decode('utf8')))
+            self.sendClose()
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
 
-def server():
+async def server():
     factory = WebSocketServerFactory(URI)
     factory.protocol = ServerProtocol
 
-    loop = asyncio.get_event_loop()
-    coro = loop.create_server(factory, IP, PORT)
-    server = loop.run_until_complete(coro)
-
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.close()
-        loop.close()
+    loop = asyncio.get_running_loop()
+    server = await loop.create_server(factory, IP, PORT)
+    async with server:
+        await server.serve_forever()
 
 async def client():
     factory = WebSocketClientFactory(URI)
     factory.protocol = ClientProtocol
     loop = asyncio.get_running_loop()
-    transport, protocol = await loop.create_connection(factory, IP, PORT)
-    print("XXX")
-    # transport.close()
+    transport, proto = await loop.create_connection(factory, IP, PORT)
+    await proto.is_open
+    try:
+        await proto.is_closed
+        print("Connection was closed")
+    finally:
+        transport.close()
+    t = normalize_t(proto.t)
+    print_statistics(t, len(DATA), N)
+    plot_statistics(t)
 
 if is_server():
-    server()
+    task = server
 else:
-    asyncio.run(client())
+    task = client
+
+try:
+    asyncio.run(task())
+except KeyboardInterrupt:
+    print("CANCALCALS")

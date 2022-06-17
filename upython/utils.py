@@ -44,9 +44,13 @@ class LED(object):
             self.on()
 
 def read_credentials():
-    with open("credentials") as f:
-        essid = f.readline().strip()
-        password = f.readline().strip()
+    try:
+        with open("credentials") as f:
+            essid = f.readline().strip()
+            password = f.readline().strip()
+    except Exception as exc:
+        exc_str = "Could not read credentials file. {exc}".format(exc=exc)
+        raise Exception(exc_str)
     return (essid, password)
 
 def do_connect(essid=None, password=None):
@@ -63,6 +67,13 @@ def do_connect(essid=None, password=None):
         while not STA_IF.isconnected():
             pass
     print('Connected to Wifi. ', STA_IF.ifconfig())
+    return STA_IF.ifconfig()
+
+def is_connected():
+    return STA_IF.isconnected()
+
+def host():
+    return STA_IF.ifconfig()[0]
 
 def go_to_sleep(sleep_ms):
     """

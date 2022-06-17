@@ -7,12 +7,22 @@ import machine
 
 # Custom modules
 import utils
-import nodemcu32s as board
+import board
 
 # Global parameters
-PIN_TX = 23
+PIN_TX = board.TX_PIN_NO
 TCP_IP = ""
 TCP_PORT = 1234
+
+DELAY_US_SHORT = 355
+DELAY_US_LONG = 3 * 355
+if "8266" in board.__CPU__:
+    TIMING_CORRECTION_US = 220
+elif "esp32" in board.__CPU__:
+    # TODO
+    TIMING_CORRECTION_US = 0
+else:
+    raise NotImplementedError("No TIMING_CORRECTION_US defined.")
 
 # Code dict
 CODE_DICT = {
@@ -33,23 +43,36 @@ CODE_DICT = {
 #-----------------------------------------------------------------------
 # MODULE FUNCTIONS
 #-----------------------------------------------------------------------
-def _sleep(delay):
-    _delay = delay / 100.
-    end = time.ticks_us() + delay - _delay
-    while time.ticks_us() < end:
-        time.sleep_us(int(_delay))
+def create_time_vector(data):
+    t = [0]
+    i = 0
+    for bit in data:
+        if bit == "0":
+            t_on = DELAY_US_SHORT + TIMING_CORRECTION_US + t[i]
+            t_off = DELAY_US_LONG - TIMING_CORRECTION_US + t_on
+        else:
+            t_on = DELAY_US_LONG + TIMING_CORRECTION_US + t[i]
+            t_off = DELAY_US_SHORT - TIMING_CORRECTION_US + t_on
+        t.append(t_on)
+        t.append(t_off)
+        i += 2
+    del t[0]
+    return t
 
 def send_code(data, count=10):
+    t_vector = create_time_vector(data)
+    print(t_vector)
     for _ in range(count):
-        for bit in data:
-            TX.value(1)
-            if bit == "0":
-                sleep = 350
-            else:
-                sleep = 3*350
-            _sleep(sleep)
-            TX.value(0)
-            _sleep(4 * 350 - sleep)
+        start = time.ticks_us()
+        state = True
+        # TX.on()
+        for t in t_vector:
+            TX.value(state)
+            state = not state
+            end = start + t
+            while time.ticks_us() < end:
+                pass
+        TX.off()
         time.sleep(10e-3)
 
 #-----------------------------------------------------------------------
@@ -71,14 +94,14 @@ def main_loop():
         # HACK: Keyboard interrupt is not properly handled in the REPL
         raise Exception("Keyboard Interrupt")
     LED.on()
-    print(f"Client connected: {remote_info}")
+    print("Client connected: {}".format(remote_info))
     recv = remote.recv(1024).decode("utf-8")
-    print(f"> {recv}")
+    print("> {recv}")
 
     try:
         data = json.loads(recv)
     except ValueError as exc:
-        finish(f"Could not parse JSON.")
+        finish("Could not parse JSON.")
         return
 
     try:
@@ -96,7 +119,7 @@ def main_loop():
     try:
         code = CODE_DICT[channel][state]
     except IndexError:
-        finish(f"{channel} or {state} unknown.")
+        finish("{} or {} unknown.".format(channel, state))
         return
 
     # TODO
@@ -114,14 +137,17 @@ def main():
         # try:
         main_loop()
         # except Exception as exc:
-            # print(f"Exception occured: {exc}")
+            # print("Exception occured: {exc}")
             # running = False
     SOCK.close()
     print("Program finished")
 
 # Initialize hardware
+if "8266" in board.__CPU__:
+    print("Setting CPU frequency to 160 MHz.")
+    machine.freq(160000000)
 LED = utils.LED(board.LED_PIN_NO, inverted=board.LED_LOGIC_INVERTED)
-TX = machine.Pin(23, machine.Pin.OUT)
+TX = machine.Pin(PIN_TX, machine.Pin.OUT)
 utils.do_connect()
 
 SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

@@ -7,10 +7,10 @@ import machine
 
 # Custom modules
 import utils
-import nodemcu32s as board
+import board
 
 # Global parameters
-PIN_TX = 23
+PIN_TX = board.TX_PIN_NO
 TCP_IP = ""
 TCP_PORT = 1234
 
@@ -121,7 +121,7 @@ def main():
 
 # Initialize hardware
 LED = utils.LED(board.LED_PIN_NO, inverted=board.LED_LOGIC_INVERTED)
-TX = machine.Pin(23, machine.Pin.OUT)
+TX = machine.Pin(PIN_TX, machine.Pin.OUT)
 utils.do_connect()
 
 SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

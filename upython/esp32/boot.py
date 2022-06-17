@@ -1,8 +1,10 @@
 # This file is executed on every boot (including wake-boot from deepsleep)
-from esp import osdebug
+# import esp
+# esp.osdebug(None)
+# import webrepl
+# webrepl.start()
 import gc
 from utils import do_connect
 
-# osdebug(None)
-do_connect()
-gc.collect()
+# do_connect()
+# gc.collect()

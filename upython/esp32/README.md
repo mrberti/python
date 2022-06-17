@@ -6,3 +6,5 @@
 esptool.exe --chip esp32 --port COM9 erase_flash
 esptool.exe --chip esp32 --port COM9 --baud 460800 write_flash -z 0x1000 <firmware_file>
 ```
+
+Remember to press the button!
