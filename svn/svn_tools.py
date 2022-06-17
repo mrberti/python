@@ -2,6 +2,7 @@
 import os
 import re
 import asyncio
+import argparse
 from datetime import datetime
 from pathlib import Path
 from subprocess import run, PIPE, CalledProcessError
@@ -9,8 +10,38 @@ from xml.etree import ElementTree
 
 from pprint import pprint
 
-wc_path = Path("/home/simon/svn/test")
-f_path = wc_path / "dir/lol.txt"
+wc_path_default = "/home/simon/svn/test"
+f_path_default = "dir/lol.txt"
+
+parser = argparse.ArgumentParser(description="Some SVN tools")
+parser.add_argument(
+    "-w",
+    help="Path to working copy",
+    default=wc_path_default,
+)
+parser.add_argument(
+    "-f",
+    help="File",
+    default=f_path_default,
+)
+parser.add_argument(
+    "-r",
+    help="Regular expresstion",
+    default=r"",
+)
+parser.add_argument(
+    "-i",
+    help="Include doc contents",
+    action="store_true",
+)
+
+args = parser.parse_args()
+REG_EX = re.compile(args.r)
+INCLUDE_CONTENT = args.i
+print(args)
+
+wc_path = Path(args.w)
+f_path = wc_path / args.f
 os.chdir(wc_path)
 
 def svn(args: list):
@@ -45,7 +76,8 @@ async def svn_async(args: list):
     stderr = stderr.decode("utf-8")
     print(f'{datetime.now()}: [PID {proc.pid}, {args!r} exited with {proc.returncode}]')
     if proc.returncode != 0:
-        print(stderr)
+        # print(stderr)
+        raise Exception(stderr)
     if use_xml:
         return ElementTree.fromstring(stdout)
     else:
@@ -122,13 +154,13 @@ async def get_contents_async(
     return parse_contents(files_data, revisions, include_data, reg_ex)
 
 async def main_async():
-    contents = await get_contents_async(f_path, include_data=False, reg_ex=r"2022-(.*)")
+    contents = await get_contents_async(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
     pprint(contents)
 
 def main():
     print(os.getcwd())
     ret = svn(["info", "--xml"])
-    contents = get_contents(f_path, reg_ex=r"2022-(.*)")
+    contents = get_contents(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
     for content in contents:
         print(content)
 
