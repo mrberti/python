@@ -2,6 +2,7 @@
 import os
 import re
 import asyncio
+from itertools import islice
 from datetime import datetime
 from pathlib import Path
 from subprocess import run, PIPE, CalledProcessError
@@ -37,15 +38,17 @@ async def svn_async(args: list):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+    print(f'{datetime.now()}: [PID {proc.pid}, Started {args!r}]')
     stdout, stderr = await proc.communicate()
-
-    print(f'{datetime.now()}: [{args!r} exited with {proc.returncode}]')
+    stdout = stdout.decode("utf-8")
+    stderr = stderr.decode("utf-8")
+    print(f'{datetime.now()}: [PID {proc.pid}, {args!r} exited with {proc.returncode}]')
     if proc.returncode != 0:
-        print(stderr.decode())
+        print(stderr)
     if use_xml:
-        return ElementTree.fromstring(stdout.decode("utf-8"))
+        return ElementTree.fromstring(stdout)
     else:
-        return stdout.decode("utf-8")
+        return stdout
 
 def get_revisions(f_path):
     xml = svn(["log", "--xml", "-rHEAD:1", str(f_path)])
@@ -67,8 +70,8 @@ def get_revisions(f_path):
 def parse_contents(files_data, revisions, include_data=True, reg_ex=None):
     contents = []
     for file_data, revision in zip(files_data, revisions):
-        print(f">>> {f_path}@REV{revision['revision']}")
-        print(file_data)
+        # print(f">>> {f_path}@REV{revision['revision']}")
+        # print(file_data)
         content = {
             "file": str(f_path),
             "revision_info": revision,
@@ -94,14 +97,20 @@ def get_contents(f_path, include_data=True, reg_ex=None):
         files_data.append(svn(["cat", f"-r{revision['revision']}", str(f_path)]))
     return parse_contents(files_data, revisions, include_data, reg_ex)
 
-async def get_contents_async(f_path, include_data=True, reg_ex=None):
-    revisions = get_revisions(f_path)
-    proc_list = []
-    for revision in revisions:
-        proc_list.append(
-            svn_async(["cat",  f"-r{revision['revision']}", str(f_path)]),
-        )
-    files_data = await asyncio.gather(*proc_list)
+async def get_contents_async(
+        f_path,
+        include_data=True,
+        reg_ex=None,
+        max_subprocesses=10):
+    revisions = get_revisions(f_path) * 10
+    files_data = []
+    for q in (revisions[i:i+max_subprocesses] for i in range(0, len(revisions), max_subprocesses)):
+        proc_list = []
+        for revision in q:
+            proc_list.append(
+                svn_async(["cat",  f"-r{revision['revision']}", str(f_path)]),
+            )
+        files_data += await asyncio.gather(*proc_list)
     return parse_contents(files_data, revisions, include_data, reg_ex)
 
 async def main_async():
