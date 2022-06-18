@@ -3,6 +3,8 @@ import re
 from pathlib import Path
 import json
 
+from svn_tools import *
+
 paths = [
     "a/b/",
     "a/b/c.txt",
@@ -17,14 +19,11 @@ def create_fs_tree(path_list):
 
     # Make sure, that no doubled entries exist
     for path in set(path_list):
-        print(path)
         # Start at root
         current = fs_tree
         is_dir = path.endswith("/")
         leafs = path.split("/")
-        print(leafs)
         for index, leaf in enumerate(leafs[0:-1]):
-            print(index, leaf)
             # Search for the item
             found_leaf = False
             for item in current:
@@ -38,7 +37,6 @@ def create_fs_tree(path_list):
                     "name": leaf,
                     "children": []
                 }
-                print(f"Created new leaf: {new_leaf}")
                 current.append(new_leaf)
                 item = new_leaf
             # Go to next item
@@ -58,12 +56,16 @@ def create_fs_tree(path_list):
     return fs_tree
 
 def filter_tree(fs_tree, reg_ex):
-    if not isinstance(reg_ex, re.Pattern):
-        reg_ex = re.compile(reg_ex)
     fs_list = tree_to_list(fs_tree, reduce=True)
-    filtered_list = list(filter(lambda x: reg_ex.search(x), fs_list))
+    filtered_list = filter_list(fs_list, reg_ex)
     filtered_fs = create_fs_tree(filtered_list)
     return filtered_fs
+
+def filter_list(fs_list, reg_ex):
+    if not isinstance(reg_ex, re.Pattern):
+        reg_ex = re.compile(reg_ex)
+    filtered_list = list(filter(lambda x: reg_ex.search(x), fs_list))
+    return filtered_list
 
 def tree_to_list(fs_tree, reduce=False):
     fs_list = []
@@ -83,14 +85,29 @@ def tree_to_list(fs_tree, reduce=False):
         fs_list = sorted(fs_list, key=lambda d: d['id']) 
     return fs_list
 
+def get_files_local(root_dir):
+    files_list = []
+    for root, dirs, files in os.walk(root_dir, followlinks=False):
+        if ".svn" in root:
+            continue
+        files_list.append(f"{root}/")
+        files_list += [f"{root}/{file}" for file in files]
+    return files_list
+
 #%%
 if __name__ == "__main__":
-    fs_tree = create_fs_tree(paths)
-    print(json.dumps(fs_tree, indent=2))
-    fs_list = tree_to_list(fs_tree, reduce=False)
-    fs_list_reduced = tree_to_list(fs_tree, reduce=True)
-    print(json.dumps(fs_list, indent=2))
-    print(json.dumps(fs_list_reduced, indent=2))
-    filter_ = r"txt$"
-    filtered = filter_tree(fs_tree, filter_)
-    print(json.dumps(filtered, indent=2))
+    repo = "svn+ssh://simon@pi/home/simon/svn/test"
+    paths = get_files_simple(repo, revision=8)
+    print(paths)
+    paths = get_files_local(wc_path)
+    print(paths)
+    # fs_tree = create_fs_tree(paths)
+    # print(json.dumps(fs_tree, indent=2))
+    # fs_list = tree_to_list(fs_tree, reduce=False)
+    # fs_list_reduced = tree_to_list(fs_tree, reduce=True)
+    # print(json.dumps(fs_list, indent=2))
+    # print(json.dumps(fs_list_reduced, indent=2))
+    # filter_ = r".*/711.*txt$"
+    # filtered = filter_tree(fs_tree, filter_)
+    # filtered = filter_list(fs_list_reduced, filter_)
+    # print(json.dumps(filtered, indent=2))

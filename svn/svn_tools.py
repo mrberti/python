@@ -3,6 +3,7 @@ import os
 import re
 import asyncio
 import argparse
+import hashlib
 from datetime import datetime
 from pathlib import Path
 from subprocess import run, PIPE, CalledProcessError
@@ -11,6 +12,7 @@ from xml.etree import ElementTree
 from pprint import pprint
 
 datetime_format = "%Y-%m-%dT%H:%M:%S.%f%z"
+hash_type = "sha256"
 
 wc_path_default = "/home/simon/svn/test"
 f_path_default = "dir/lol.txt"
@@ -119,7 +121,9 @@ def parse_contents(files_data, revisions, include_data=True, reg_ex=None):
             "revision_info": revision,
         }
         if include_data:
+            hash_val = hashlib.new(hash_type, file_data.encode("utf-8")).hexdigest()
             content["data"] = file_data
+            content["hash"] = f"{hash_type}+{hash_val}"
         if reg_ex is not None:
             if not isinstance(reg_ex, re.Pattern):
                 reg_ex = re.compile(reg_ex)
@@ -187,13 +191,14 @@ def get_files(repo=None, dirs_only=False):
         dirs.append(data)
     return dirs
 
-def get_files_simple(repo=None, dirs_only=False):
+def get_files_simple(repo=None, revision=None, dirs_only=False):
     """Returns a simple list which contains all filenames inside the
     repository.
 
     If `dirs_only == True`, only directories are returned."""
     if repo is None: repo = "."
-    dirs = svn(["ls", "--depth", "infinity", str(repo)])
+    if revision is None: revision = "HEAD"
+    dirs = svn(["ls", "--depth", "infinity", str(repo), f"-r{revision}"])
     if dirs_only:
         # Directories end with a '/'
         exp = r"(.+\/)$"
@@ -209,16 +214,16 @@ async def main_async():
 def main():
     print(os.getcwd())
     # ret = svn(["info", "--xml"])
-    # contents = get_contents(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
-    # for content in contents:
-    #     print(content)
-    pprint(get_files_simple(dirs_only=False))
-    pprint(get_files(dirs_only=False))
+    contents = get_contents(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
+    for content in contents:
+        print(content)
+    # pprint(get_files_simple(dirs_only=False))
+    # pprint(get_files(dirs_only=False))
 
 #%%
 if __name__ == "__main__":
     start = datetime.now()
-    main()
-    # asyncio.run(main_async())
+    # main()
+    asyncio.run(main_async())
     end = datetime.now()
     print(f"Required time: {end - start}")
