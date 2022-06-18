@@ -10,6 +10,8 @@ from xml.etree import ElementTree
 
 from pprint import pprint
 
+datetime_format = "%Y-%m-%dT%H:%M:%S.%f%z"
+
 wc_path_default = "/home/simon/svn/test"
 f_path_default = "dir/lol.txt"
 
@@ -88,7 +90,7 @@ def parse_revisions(xml_data):
     for logentry in xml_data.findall(".//logentry"):
         revision_number = int(logentry.attrib["revision"])
         author = logentry.find("author").text
-        date = datetime.strptime(logentry.find("date").text, "%Y-%m-%dT%H:%M:%S.%f%z")
+        date = datetime.strptime(logentry.find("date").text, datetime_format)
         msg = logentry.find("msg").text
         revision = {
             "revision": revision_number,
@@ -153,21 +155,45 @@ async def get_contents_async(
         files_data += await asyncio.gather(*proc_list)
     return parse_contents(files_data, revisions, include_data, reg_ex)
 
+def get_directories():
+    dir_xml = svn(["ls", "--depth", "infinity", "--xml"])
+    dir_entries = dir_xml.findall(".//entry[@kind='dir']")
+    dirs = []
+    for dir_entry in dir_entries:
+        dir_name = dir_entry.findtext("name")
+        revision = int(dir_entry.find("commit").attrib["revision"])
+        author = dir_entry.findtext("commit/author")
+        date = datetime.strptime(dir_entry.findtext("commit/date"), datetime_format)
+        dir_data = {
+            "dir_name": dir_name,
+            "revision": revision,
+            "author": author,
+            "date": date,
+        }
+        dirs.append(dir_data)
+    return dirs
+
+def get_directories_simple():
+    dirs = svn(["ls", "--depth", "infinity"])
+    x = re.findall(r"(.*\/)$", dirs, re.MULTILINE)
+    return(x)
+
 async def main_async():
     contents = await get_contents_async(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
     pprint(contents)
 
 def main():
     print(os.getcwd())
-    ret = svn(["info", "--xml"])
-    contents = get_contents(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
-    for content in contents:
-        print(content)
+    # ret = svn(["info", "--xml"])
+    # contents = get_contents(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
+    # for content in contents:
+    #     print(content)
+    pprint(get_directories_simple())
 
 #%%
 if __name__ == "__main__":
     start = datetime.now()
-    # main()
-    asyncio.run(main_async())
+    main()
+    # asyncio.run(main_async())
     end = datetime.now()
     print(f"Required time: {end - start}")
