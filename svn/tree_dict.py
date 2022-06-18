@@ -6,6 +6,7 @@ import json
 paths = [
     "a/b/",
     "a/b/c.txt",
+    "a/b/c.txt",
     "a/d.html",
     "q.tar.gz",
     "q/b",
@@ -14,7 +15,8 @@ paths = [
 def create_fs_tree(path_list):
     fs_tree = []
 
-    for path in path_list:
+    # Make sure, that no doubled entries exist
+    for path in set(path_list):
         print(path)
         # Start at root
         current = fs_tree
@@ -89,6 +91,6 @@ if __name__ == "__main__":
     fs_list_reduced = tree_to_list(fs_tree, reduce=True)
     print(json.dumps(fs_list, indent=2))
     print(json.dumps(fs_list_reduced, indent=2))
-    filter_ = r"txt"
+    filter_ = r"txt$"
     filtered = filter_tree(fs_tree, filter_)
     print(json.dumps(filtered, indent=2))
