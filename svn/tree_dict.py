@@ -1,6 +1,7 @@
 #%%
-import json
+import re
 from pathlib import Path
+import json
 
 paths = [
     "a/b/",
@@ -54,8 +55,15 @@ def create_fs_tree(path_list):
             current.append(new_leaf)
     return fs_tree
 
+def filter_tree(fs_tree, reg_ex):
+    if not isinstance(reg_ex, re.Pattern):
+        reg_ex = re.compile(reg_ex)
+    fs_list = tree_to_list(fs_tree, reduce=True)
+    filtered_list = list(filter(lambda x: reg_ex.search(x), fs_list))
+    filtered_fs = create_fs_tree(filtered_list)
+    return filtered_fs
+
 def tree_to_list(fs_tree, reduce=False):
-    # print(fs_tree)
     fs_list = []
     for item in fs_tree:
         if "children" in item:
@@ -73,9 +81,14 @@ def tree_to_list(fs_tree, reduce=False):
         fs_list = sorted(fs_list, key=lambda d: d['id']) 
     return fs_list
 
-fs_tree = create_fs_tree(paths)
-print(json.dumps(fs_tree, indent=2))
-fs_list = tree_to_list(fs_tree, reduce=False)
-fs_list_reduced = tree_to_list(fs_tree, reduce=True)
-print(json.dumps(fs_list, indent=2))
-print(json.dumps(fs_list_reduced, indent=2))
+#%%
+if __name__ == "__main__":
+    fs_tree = create_fs_tree(paths)
+    print(json.dumps(fs_tree, indent=2))
+    fs_list = tree_to_list(fs_tree, reduce=False)
+    fs_list_reduced = tree_to_list(fs_tree, reduce=True)
+    print(json.dumps(fs_list, indent=2))
+    print(json.dumps(fs_list_reduced, indent=2))
+    filter_ = r"txt"
+    filtered = filter_tree(fs_tree, filter_)
+    print(json.dumps(filtered, indent=2))
