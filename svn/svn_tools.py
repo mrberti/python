@@ -37,7 +37,7 @@ parser.add_argument(
     action="store_true",
 )
 
-args = parser.parse_args()
+args = parser.parse_known_args()[0]
 REG_EX = re.compile(args.r)
 INCLUDE_CONTENT = args.i
 print(args)
@@ -155,27 +155,51 @@ async def get_contents_async(
         files_data += await asyncio.gather(*proc_list)
     return parse_contents(files_data, revisions, include_data, reg_ex)
 
-def get_directories():
-    dir_xml = svn(["ls", "--depth", "infinity", "--xml"])
-    dir_entries = dir_xml.findall(".//entry[@kind='dir']")
+def get_files(repo=None, dirs_only=False):
+    """Creates a list of dicts, containing the complete repository
+    structure, including commit information, like author, revision and
+    date.
+
+    If `dirs_only == True`, only directories are returned.
+    """
+    if repo is None: repo = "."
+    dir_xml = svn(["ls", "--depth", "infinity", "--xml", str(repo)])
+    if dirs_only:
+        entries = dir_xml.findall(".//entry[@kind='dir']")
+    else:
+        entries = dir_xml.findall(".//entry")
     dirs = []
-    for dir_entry in dir_entries:
-        dir_name = dir_entry.findtext("name")
-        revision = int(dir_entry.find("commit").attrib["revision"])
-        author = dir_entry.findtext("commit/author")
-        date = datetime.strptime(dir_entry.findtext("commit/date"), datetime_format)
-        dir_data = {
-            "dir_name": dir_name,
+    for entry in entries:
+        name = entry.findtext("name")
+        kind = entry.attrib["kind"]
+        if kind == "dir":
+            name += "/"
+        revision = int(entry.find("commit").attrib["revision"])
+        author = entry.findtext("commit/author")
+        date = datetime.strptime(entry.findtext("commit/date"), datetime_format)
+        data = {
+            "name": name,
+            "kind": kind,
             "revision": revision,
             "author": author,
             "date": date,
         }
-        dirs.append(dir_data)
+        dirs.append(data)
     return dirs
 
-def get_directories_simple():
-    dirs = svn(["ls", "--depth", "infinity"])
-    x = re.findall(r"(.*\/)$", dirs, re.MULTILINE)
+def get_files_simple(repo=None, dirs_only=False):
+    """Returns a simple list which contains all filenames inside the
+    repository.
+
+    If `dirs_only == True`, only directories are returned."""
+    if repo is None: repo = "."
+    dirs = svn(["ls", "--depth", "infinity", str(repo)])
+    if dirs_only:
+        # Directories end with a '/'
+        exp = r"(.+\/)$"
+    else:
+        exp = r"(.+)$"
+    x = re.findall(exp, dirs, re.MULTILINE)
     return(x)
 
 async def main_async():
@@ -188,7 +212,8 @@ def main():
     # contents = get_contents(f_path, include_data=INCLUDE_CONTENT, reg_ex=REG_EX)
     # for content in contents:
     #     print(content)
-    pprint(get_directories_simple())
+    pprint(get_files_simple(dirs_only=False))
+    pprint(get_files(dirs_only=False))
 
 #%%
 if __name__ == "__main__":
