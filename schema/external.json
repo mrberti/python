@@ -1,0 +1,9 @@
+{
+    "$id": "external.json",
+    "type": "object",
+    "properties": {
+        "test": {
+            "type": "integer"
+        }
+    }
+}

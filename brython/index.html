@@ -1,0 +1,33 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js">
+    </script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython_stdlib.js">
+    </script>
+</head>
+
+<body onload="brython()">
+
+    <script type="text/python">
+
+        from browser import document, html
+
+        calc = html.TABLE()
+        calc <= html.TR(html.TH(html.DIV("0", id="result"), colspan=3) +
+                        html.TD("C", id="clear"))
+        lines = ["789/",
+                 "456*",
+                 "123-",
+                 "0.=+"]
+        
+        calc <= (html.TR(html.TD(x) for x in line) for line in lines)
+        
+        document <= calc
+    </script>
+
+
+</body>
+
+</html>

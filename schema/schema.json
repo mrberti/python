@@ -1,0 +1,22 @@
+{
+    "type": "object",
+    "aasdasd": "dasdas",
+    "properties": {
+        "base": {
+            "type": "string",
+            "pattern": "^([0-9][,$]?)+$"
+        },
+        "obj": {
+            "type": "object",
+            "required": ["x"],
+            "properties": {
+                "x": {
+                    "type": "number"
+                },
+                "y": {
+                    "type": "number"
+                }
+            }
+        }
+    }
+}

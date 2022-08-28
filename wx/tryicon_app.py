@@ -5,7 +5,7 @@ import wx
 import wx.adv
 
 TRAY_TOOLTIP = 'System Tray Demo'
-TRAY_ICON = 'icon.png'
+TRAY_ICON = 'wx/icon.png'
 
 def create_menu_item(menu, label, func):
     item = wx.MenuItem(menu, -1, label)
